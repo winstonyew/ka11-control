@@ -1,0 +1,19 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pillow pytest
+      # The UI tests need Windows 11's fonts and skip themselves on the Server build machines;
+      # the protocol, volume-safety and settings tests run everywhere.
+      - run: python -m pytest tests -v

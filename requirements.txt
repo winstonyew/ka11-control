@@ -1,6 +1,9 @@
 # Running from source
 pillow>=10
 
+# Only needed to run the tests (python -m pytest tests)
+pytest>=8
+
 # Only needed to regenerate filter_curves_data.py (python filter_shapes.py)
 numpy>=1.24
 

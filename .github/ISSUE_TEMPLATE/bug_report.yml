@@ -48,7 +48,7 @@ body:
     attributes:
       label: KA11 Control version
       description: The release you downloaded, or the commit if running from source
-      placeholder: v1.0.0
+      placeholder: v1.1.0
 
   - type: textarea
     id: extra

@@ -1,0 +1,32 @@
+name: Release
+
+# Push a tag like v1.2.0 and this builds KA11-Control.exe and attaches it to that release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pillow pyinstaller pytest
+      - run: python -m pytest tests -q
+      - run: python build.py
+        # To sign the exe, add a SIGN_COMMAND secret and pass it in here:
+        # env:
+        #   SIGN_COMMAND: ${{ secrets.SIGN_COMMAND }}
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "KA11 Control ${GITHUB_REF_NAME#v}" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/KA11-Control.exe --clobber

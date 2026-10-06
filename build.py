@@ -2,22 +2,27 @@
 
 Needs PyInstaller and Pillow (numpy is only used to regenerate the filter curves and isn't bundled):
     python -m pip install -r requirements.txt
-    python build.py
+    python build.py            # build
+    python build.py --icon     # also redraw assets/ka11.ico (needs Windows 11's Segoe Fluent Icons)
+
+Optional code signing: set SIGN_COMMAND to a signing command and the exe path is appended, e.g.
+    SIGN_COMMAND=signtool sign /fd sha256 /tr http://timestamp.acs.microsoft.com /td sha256 /a
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
 HERE = Path(__file__).parent
-ICON = HERE / "build" / "ka11.ico"
+ICON = HERE / "assets" / "ka11.ico"  # committed, because CI machines lack the Segoe Fluent Icons font
 FONT_ICONS = r"C:\Windows\Fonts\SegoeIcons.ttf"
 ICON_HEADPHONES = "\ue7f6"
 
 
 def make_icon():
     """White Fluent headphones silhouette on transparency - same artwork as the window icon."""
+    from PIL import Image, ImageDraw, ImageFont
+
     size = 256
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).text((size / 2, size / 2), ICON_HEADPHONES, font=ImageFont.truetype(FONT_ICONS, 236),
@@ -30,10 +35,18 @@ def make_icon():
     img.save(ICON, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 
 
+def sign(exe):
+    command = os.environ.get("SIGN_COMMAND")
+    if command:
+        subprocess.run(f'{command} "{exe}"', shell=True, check=True)
+        print("Signed")
+
+
 def main():
     if not (HERE / "filter_curves_data.py").exists():
         subprocess.run([sys.executable, "filter_shapes.py"], cwd=HERE, check=True)
-    make_icon()
+    if not ICON.exists() or "--icon" in sys.argv:
+        make_icon()
     subprocess.run([
         sys.executable, "-m", "PyInstaller", "ka11_control.pyw",
         "--name", "KA11-Control",
@@ -46,6 +59,7 @@ def main():
         "--specpath", str(HERE / "build"),
     ], cwd=HERE, check=True)
     exe = HERE / "dist" / "KA11-Control.exe"
+    sign(exe)
     print(f"\nBuilt {exe} ({exe.stat().st_size / 1e6:.1f} MB)")
 
 
