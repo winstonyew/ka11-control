@@ -33,6 +33,7 @@ def app(tmp_path, monkeypatch):
         def set_tray_icon(self, *a): pass
         def set_tip(self, *a): pass
         def set_hotkeys(self, enabled): return []
+        def poll(self): return []
         def close(self): pass
 
     monkeypatch.setattr(mod["winshell"], "Shell", NoShell)
@@ -150,3 +151,15 @@ def test_every_page_renders(app):
     for key, _, _ in app.__class__.__init__.__globals__["PAGES"]:
         app.page = key
         app.render_base()
+
+
+def test_unplug_burst_does_not_crash():
+    """Regression: a USB unplug is broadcast to every window at once. Handling it by calling Tk from
+    the shell window's procedure crashed the app ("Fatal Python error: PyEval_RestoreThread").
+    Runs in a subprocess because the failure kills the whole process."""
+    import subprocess
+    import sys
+    script = os.path.join(os.path.dirname(__file__), "device_burst.py")
+    result = subprocess.run([sys.executable, script], capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stderr[-2000:]
+    assert "survived" in result.stdout

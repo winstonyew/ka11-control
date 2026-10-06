@@ -112,6 +112,14 @@ def test_windows_attenuation(monkeypatch):
         ka11.windows_attenuation()
 
 
+def test_struct_sizes_match_windows():
+    import ctypes
+    # Windows writes the full struct; a short declaration means it writes past the end of our buffer.
+    assert ctypes.sizeof(ka11.HIDP_CAPS) == 66  # 5 + 17 reserved + 11 counts, all USHORT
+    assert ctypes.sizeof(ka11.HIDD_ATTRIBUTES) == 12
+    assert ctypes.sizeof(ka11.OVERLAPPED) == 32
+
+
 def test_update_versions():
     assert updates.is_newer("v1.2.0", "1.1.0")
     assert not updates.is_newer("v1.1.0", "1.1.0")

@@ -48,10 +48,10 @@ body:
     attributes:
       label: KA11 Control version
       description: The release you downloaded, or the commit if running from source
-      placeholder: v1.1.0
+      placeholder: v1.1.1
 
   - type: textarea
     id: extra
     attributes:
       label: Anything else?
-      description: Screenshots, other USB audio devices plugged in, anything that seems relevant.
+      description: Screenshots, other USB audio devices plugged in, anything that seems relevant. If the app crashed, please attach %APPDATA%\KA11 Control\log.txt.

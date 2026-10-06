@@ -433,11 +433,14 @@ class TrayFlyout:
             self.win.destroy()
             self.win = None
             self.hover = None
+            self.hidden_at = time.perf_counter()
 
     def toggle(self):
         if self.win:
             self.hide()
-        else:
+        elif time.perf_counter() - getattr(self, "hidden_at", 0) > 0.4:
+            # Clicking the tray icon while the flyout is open first closes it through focus-out;
+            # that same click shouldn't open it again.
             self.show()
 
     def refresh(self):
@@ -641,12 +644,11 @@ class App:
 
         # Notification area, hotkeys and plug/unplug notifications
         self.tray = TrayFlyout(self)
-        self.shell = winshell.Shell(dict(on_tray_click=self.tray.toggle, on_menu=self.tray_menu,
-                                         on_command=self.tray_command, on_hotkey=self.on_hotkey,
-                                         on_device_change=self.on_device_change, on_show=self.show_window))
+        self.shell = winshell.Shell(self.tray_menu)
         winshell.allow_dark_menus(self.t["dark"])
         self.shell.set_tray_icon(self.tray_icon_file(), "KA11 Control")
         self.apply_hotkeys()
+        self.poll_shell()
 
         if start_hidden:
             root.withdraw()
@@ -696,6 +698,23 @@ class App:
             self.root.withdraw()
         else:
             self.quit()
+
+    def poll_shell(self):
+        """Handle tray, hotkey and plug/unplug events. The shell window only records them, because
+        calling Tk from inside its window procedure can crash Tkinter (see winshell.Shell)."""
+        for event in self.shell.poll():
+            kind = event[0]
+            if kind == "tray_click":
+                self.tray.toggle()
+            elif kind == "hotkey":
+                self.on_hotkey(event[1])
+            elif kind == "command":
+                self.tray_command(event[1])
+            elif kind == "device":
+                self.on_device_change(event[1])
+            elif kind == "show":
+                self.show_window()
+        self.root.after(50, self.poll_shell)
 
     def quit(self):
         self.tray.hide()
@@ -1765,14 +1784,24 @@ class App:
         self.set_status("Copied connection details", "ok")
 
     def make_default(self):
-        try:
-            ok = winvolume.make_default()
-        except OSError as e:
-            ok = False
-            self.set_status(f"Couldn't change the default output ({e})", "error")
-        if ok:
-            self.info["default"] = True
-            self.set_status("KA11 is now the default output", "ok")
+        # On a worker thread like everything else that calls into Windows: COM calls can pump
+        # window messages, which must not happen inside a Tk callback.
+        def worker():
+            try:
+                ok, error = winvolume.make_default(), None
+            except OSError as e:
+                ok, error = False, e
+
+            def finish():
+                if ok:
+                    self.info["default"] = True
+                    self.set_status("KA11 is now the default output", "ok")
+                elif error:
+                    self.set_status(f"Couldn't change the default output ({error})", "error")
+            self.results.put(finish)
+
+        threading.Thread(target=worker, daemon=True).start()
+        self.root.after(500, self.poll_results)
 
     def check_updates(self):
         def worker():
@@ -1862,7 +1891,22 @@ class App:
         self._run(work, done, "Restoring defaults…", retry=self.apply_restore)
 
 
+def log_crashes():
+    """The windowed exe has no console, so errors would vanish. Send them, and Python's report of any
+    fatal crash, to %APPDATA%\\KA11 Control\\log.txt instead."""
+    if sys.stderr is not None:
+        return
+    import faulthandler
+    path = settings.path().with_name("log.txt")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    log = open(path, "a", encoding="utf-8", buffering=1)
+    log.write(f"\n--- KA11 Control {__version__} started {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    sys.stderr = sys.stdout = log
+    faulthandler.enable(log)
+
+
 def main():
+    log_crashes()
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)  # crisp rendering on high-DPI screens
     except (AttributeError, OSError):

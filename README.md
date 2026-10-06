@@ -116,7 +116,7 @@ A few notes:
 - "Off for now" is FiiO's "turn off once". I'm assuming it lasts until you replug.
 - FiiO's app has a headphone detection setting for this family of dongles but hides it for the KA11, so I've left it out too.
 - "Make default output" uses the same undocumented Windows interface that most audio switcher tools use.
-- Settings are kept in `%APPDATA%\KA11 Control\settings.json`. The update check is one request to GitHub's public releases API at startup, and you can turn it off.
+- Settings are kept in `%APPDATA%\KA11 Control\settings.json`. If the app ever crashes, `log.txt` in the same folder says why, so please attach it to a bug report. The update check is one request to GitHub's public releases API at startup, and you can turn it off.
 
 ## Bugs and feedback
 

@@ -2,9 +2,10 @@
 notifications, single-instance handling and Start with Windows.
 
 Everything hangs off one hidden window created on the Tk thread. Tcl's Windows event loop
-dispatches all of that thread's messages, so its window procedure runs inside Tk's mainloop and
-callbacks can touch Tk directly.
+dispatches its messages, but the window procedure only records events for the app to poll:
+calling Tk from inside it can crash Tkinter (see Shell).
 """
+import collections
 import ctypes
 import sys
 import winreg
@@ -160,16 +161,23 @@ def allow_dark_menus(dark):
 class Shell:
     """Owns the hidden window, tray icon, hotkeys and device notifications.
 
-    Callbacks: on_tray_click(), on_menu() -> list of (id, label, flags) items, on_command(id),
-    on_hotkey(name), on_device_change(), on_show().
+    The window procedure never calls back into the app. Windows can run it in the middle of Tk's
+    own event processing (a USB unplug is broadcast to every window at once), and calling Tk from
+    there corrupts Tkinter's thread-state bookkeeping, which kills the process with
+    "Fatal Python error: PyEval_RestoreThread". Instead it records small event codes, and the app
+    collects them with poll() from an ordinary Tk timer.
+
+    menu_items() is the one exception: it builds the tray menu while the menu is open. It must not
+    touch Tk either (it only reads settings).
     """
 
     HOTKEYS = {1: ("volume_up", MOD_CONTROL | MOD_ALT, 0x26),  # Ctrl+Alt+Up
                2: ("volume_down", MOD_CONTROL | MOD_ALT, 0x28),  # Ctrl+Alt+Down
                3: ("mute", MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 0x4D)}  # Ctrl+Alt+M
 
-    def __init__(self, callbacks):
-        self.cb = callbacks
+    def __init__(self, menu_items):
+        self.menu_items = menu_items
+        self.events = collections.deque()  # ("tray_click",), ("hotkey", name), ("command", id), ...
         self.icon = None
         self.tip = APP_NAME
         self.tray_added = False
@@ -183,10 +191,17 @@ class Shell:
                          lpszClassName=CLASS_NAME)
         user32.RegisterClassExW(ctypes.byref(wc))
         self.hwnd = user32.CreateWindowExW(0, CLASS_NAME, APP_NAME, 0, 0, 0, 0, 0, None, None, hinst, None)
-        f =DEV_BROADCAST_DEVICEINTERFACE_W(dbcc_size=ctypes.sizeof(DEV_BROADCAST_DEVICEINTERFACE_W),
+        f = DEV_BROADCAST_DEVICEINTERFACE_W(dbcc_size=ctypes.sizeof(DEV_BROADCAST_DEVICEINTERFACE_W),
                                             dbcc_devicetype=DBT_DEVTYP_DEVICEINTERFACE,
                                             dbcc_classguid=GUID_DEVINTERFACE_HID)
         self.notify = user32.RegisterDeviceNotificationW(self.hwnd, ctypes.byref(f), 0)
+
+    def poll(self):
+        """Events recorded since the last call, oldest first. Call from the Tk thread."""
+        out = []
+        while self.events:
+            out.append(self.events.popleft())
+        return out
 
     # tray icon
     def set_tray_icon(self, ico_path, tip):
@@ -226,7 +241,7 @@ class Shell:
 
     def show_menu(self):
         menu = user32.CreatePopupMenu()
-        for cmd, label, flags in self.cb["on_menu"]():
+        for cmd, label, flags in self.menu_items():
             if label is None:
                 user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
             else:
@@ -239,35 +254,35 @@ class Shell:
         user32.PostMessageW(self.hwnd, WM_NULL, 0, 0)
         user32.DestroyMenu(menu)
         if cmd:
-            self.cb["on_command"](cmd)
+            self.events.append(("command", cmd))
 
     def _wndproc(self, hwnd, msg, wparam, lparam):
+        # Record only; see the class docstring for why nothing here may call into Tk.
         try:
             if msg == WM_TRAY:
                 if lparam == WM_LBUTTONUP:
-                    self.cb["on_tray_click"]()
+                    self.events.append(("tray_click",))
                 elif lparam == WM_RBUTTONUP:
                     self.show_menu()
                 return 0
             if msg == WM_HOTKEY and wparam in self.HOTKEYS:
-                self.cb["on_hotkey"](self.HOTKEYS[wparam][0])
+                self.events.append(("hotkey", self.HOTKEYS[wparam][0]))
                 return 0
             if msg == WM_DEVICECHANGE and wparam in (DBT_DEVICEARRIVAL, DBT_DEVICEREMOVECOMPLETE) and lparam:
                 hdr = ctypes.cast(lparam, ctypes.POINTER(DEV_BROADCAST_HDR)).contents
                 if hdr.dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE:
                     name = ctypes.wstring_at(lparam + DEV_BROADCAST_DEVICEINTERFACE_W.dbcc_name.offset)
                     if "vid_2972" in name.lower():  # FiiO
-                        self.cb["on_device_change"](wparam == DBT_DEVICEARRIVAL)
+                        self.events.append(("device", wparam == DBT_DEVICEARRIVAL))
                 return 1
             if msg == WM_SHOW:
-                self.cb["on_show"]()
+                self.events.append(("show",))
                 return 0
             if msg == self.taskbar_created and self.tray_added:
                 self._notify(NIM_ADD)  # Explorer restarted and lost our icon
                 return 0
         except Exception:  # never let an exception escape into Windows' message dispatch
-            import traceback
-            traceback.print_exc()
+            pass
         return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
     def close(self):

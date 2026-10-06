@@ -69,7 +69,7 @@ class HIDP_CAPS(ctypes.Structure):
     _fields_ = [("Usage", wt.USHORT), ("UsagePage", wt.USHORT),
                 ("InputReportByteLength", wt.USHORT), ("OutputReportByteLength", wt.USHORT),
                 ("FeatureReportByteLength", wt.USHORT), ("Reserved", wt.USHORT * 17),
-                ("Counts", wt.USHORT * 10)]
+                ("Counts", wt.USHORT * 11)]  # NumberLinkCollectionNodes .. NumberFeatureDataIndices
 
 
 class OVERLAPPED(ctypes.Structure):
