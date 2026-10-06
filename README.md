@@ -93,7 +93,7 @@ pip install pytest
 python -m pytest tests
 ```
 
-`tests/test_ka11.py` checks the protocol bytes, the volume maths and the jump guard with the USB transport swapped out. `tests/test_app.py` clicks through the real UI against a fake dongle (`tests/fake_ka11.py`), so nothing reaches real hardware. The UI tests need Windows 11's fonts, so they skip themselves on GitHub's build machines.
+`tests/test_ka11.py` checks the protocol bytes, the volume maths and the jump guard with the USB transport swapped out. `tests/test_app.py` clicks through the real UI against a fake dongle (`tests/fake_ka11.py`), so nothing reaches real hardware. The UI tests open real windows, so they skip themselves on GitHub's build machines.
 
 ## How it works
 

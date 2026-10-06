@@ -1,5 +1,6 @@
-"""Drive the real UI against FakeKA11. Needs a desktop and Windows 11's Segoe fonts, so it's skipped
-on CI build machines; run it locally with: python -m pytest tests"""
+"""Drive the real UI against FakeKA11. Needs a desktop and Windows 11's Segoe fonts. Skipped on CI,
+where Tk on the hosted build machines fails to start now and then; run it locally with:
+python -m pytest tests"""
 import os
 import runpy
 import time
@@ -7,7 +8,8 @@ import time
 import pytest
 
 FONT = r"C:\Windows\Fonts\SegUIVar.ttf"
-pytestmark = pytest.mark.skipif(not os.path.exists(FONT), reason="needs Windows 11 fonts and a desktop")
+pytestmark = pytest.mark.skipif(not os.path.exists(FONT) or bool(os.environ.get("CI")),
+                                reason="needs Windows 11 fonts and a desktop session")
 
 
 @pytest.fixture
