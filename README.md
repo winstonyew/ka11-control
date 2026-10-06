@@ -3,8 +3,7 @@
 A small Windows app for changing the settings on a FiiO KA11 USB DAC: volume, digital filter, LED and USB audio mode.
 
 <p align="center">
-  <img src="docs/screenshots/sound.png" width="300" alt="Sound page">
-  <img src="docs/screenshots/device.png" width="300" alt="Device page">
+  <img src="docs/demo.gif" width="420" alt="KA11 Control: opening the menu, switching pages, the restore dialog and the filter list">
 </p>
 
 Not affiliated with FiiO in any way. FiiO and KA11 are their trademarks. Use at your own risk, and read the [volume notes](#volume) first.
@@ -31,7 +30,7 @@ I built this with Claude Code. I set the direction, tested everything on my own 
 
 | | | |
 |---|---|---|
-| ![Navigation](docs/screenshots/navigation.png) | ![Filters](docs/screenshots/filter-list.png) | ![Connection](docs/screenshots/connection.png) |
+| ![Sound](docs/screenshots/sound.png) | ![Device](docs/screenshots/device.png) | ![Connection](docs/screenshots/connection.png) |
 
 ## Download
 
@@ -94,6 +93,10 @@ A few notes:
 - The filter diagrams show what each filter type looks like in general. They aren't measured from the KA11.
 - "Off for now" is FiiO's "turn off once". I'm assuming it lasts until you replug.
 - FiiO's app has a headphone detection setting for this family of dongles but hides it for the KA11, so I've left it out too.
+
+## Bugs and feedback
+
+[Open an issue](../../issues/new/choose). The bug report form asks for the text from the Connection page's "Copy details" button, which covers most of what I need. If you're on a firmware other than 0.08, I'd love to hear whether it works.
 
 ## License
 

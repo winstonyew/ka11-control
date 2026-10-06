@@ -1,0 +1,57 @@
+name: Bug report
+description: Something isn't working with KA11 Control
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! If the volume ever behaves unexpectedly (sudden jumps, louder than it should be), please say so in the title. Those get looked at first.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Connection details
+      description: Open the Connection page, click **Copy details** and paste it here. If the app won't start or can't find the dongle, just say so.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Settings → System → About, e.g. Windows 11 24H2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it?
+      options:
+        - KA11-Control.exe from the releases page
+        - From source (python ka11_control.pyw)
+        - Command line (python ka11.py)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: KA11 Control version
+      description: The release you downloaded, or the commit if running from source
+      placeholder: v1.0.0
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, other USB audio devices plugged in, anything that seems relevant.

@@ -211,8 +211,13 @@ class FilterFlyout:
         x0, _, x1, y1 = FILTER_BOX
         self.width = x1 - x0
         self.height = FLYOUT_PAD * 2 + FLYOUT_ITEM_H * len(ka11.FILTERS)
+        # Like a WinUI ComboBox: open over the box with the current choice lined up on it, kept
+        # inside the window instead of hanging off the bottom edge.
+        selected = app.filter or 0
+        top = (FILTER_BOX[1] + y1) / 2 - (FLYOUT_PAD + selected * FLYOUT_ITEM_H + FLYOUT_ITEM_H / 2)
+        top = max(8, min(top, H - 8 - self.height))
         self.x = app.root.winfo_rootx() + round(x0 * s)
-        self.y = app.root.winfo_rooty() + round((y1 + 4) * s)
+        self.y = app.root.winfo_rooty() + round(top * s)
         self.win = tk.Toplevel(app.root, bg="#%02x%02x%02x" % t["flyout"])
         self.win.overrideredirect(True)
         self.win.attributes("-alpha", 0.0)
