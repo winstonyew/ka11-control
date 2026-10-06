@@ -1,0 +1,8 @@
+# Running from source
+pillow>=10
+
+# Only needed to regenerate filter_curves_data.py (python filter_shapes.py)
+numpy>=1.24
+
+# Only needed to build the exe (python build.py)
+pyinstaller>=6

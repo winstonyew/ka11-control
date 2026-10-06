@@ -1,0 +1,13 @@
+# Build output (python build.py)
+build/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Never commit vendor apps or extracted copies of them
+*.apk
+*.zip
